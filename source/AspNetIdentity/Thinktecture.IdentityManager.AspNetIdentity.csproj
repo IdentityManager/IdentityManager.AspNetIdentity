@@ -56,12 +56,7 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Core\Core.csproj">
-      <Project>{319e13dd-c16a-4936-b179-bbfba52c693b}</Project>
-      <Name>Core</Name>
-    </ProjectReference>
+    <None Include="Thinktecture.IdentityManager.AspNetIdentity.nuspec" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
