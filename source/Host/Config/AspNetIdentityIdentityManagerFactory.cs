@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
-using Thinktecture.IdentityManager.Core;
+using Thinktecture.IdentityManager;
 
 namespace Thinktecture.IdentityManager.Host
 {
@@ -27,7 +27,9 @@ namespace Thinktecture.IdentityManager.Host
             var db = new IdentityDbContext<IdentityUser>(this.connString);
             var store = new UserStore<IdentityUser>(db);
             var mgr = new Microsoft.AspNet.Identity.UserManager<IdentityUser>(store);
-            return new Thinktecture.IdentityManager.AspNetIdentity.IdentityManagerService<IdentityUser, string>(mgr, db);
+            var svc = new Thinktecture.IdentityManager.AspNetIdentity.AspNetIdentityManagerService<IdentityUser, string>(mgr);
+
+            return new DisposableIdentityManagerService(svc, db);
 
             //var db = new CustomDbContext("CustomAspId");
             //var store = new CustomUserStore(db);
