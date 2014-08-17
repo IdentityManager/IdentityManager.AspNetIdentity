@@ -11,9 +11,9 @@ namespace Thinktecture.IdentityManager.Host
     {
         static AspNetIdentityIdentityManagerFactory()
         {
-            System.Data.Entity.Database.SetInitializer(new System.Data.Entity.CreateDatabaseIfNotExists<IdentityDbContext>());
-            
-            //System.Data.Entity.Database.SetInitializer(new System.Data.Entity.CreateDatabaseIfNotExists<CustomDbContext>());
+            System.Data.Entity.Database.SetInitializer(new System.Data.Entity.DropCreateDatabaseIfModelChanges<IdentityDbContext>());
+
+            //System.Data.Entity.Database.SetInitializer(new System.Data.Entity.DropCreateDatabaseIfModelChanges<CustomDbContext>());
         }
 
         string connString;
@@ -25,9 +25,12 @@ namespace Thinktecture.IdentityManager.Host
         public IIdentityManagerService Create()
         {
             var db = new IdentityDbContext<IdentityUser>(this.connString);
-            var store = new UserStore<IdentityUser>(db);
-            var mgr = new Microsoft.AspNet.Identity.UserManager<IdentityUser>(store);
-            var svc = new Thinktecture.IdentityManager.AspNetIdentity.AspNetIdentityManagerService<IdentityUser, string>(mgr);
+            var userStore = new UserStore<IdentityUser>(db);
+            var userMgr = new Microsoft.AspNet.Identity.UserManager<IdentityUser>(userStore);
+            var roleStore = new RoleStore<IdentityRole>(db);
+            var roleMgr = new Microsoft.AspNet.Identity.RoleManager<IdentityRole>(roleStore);
+            
+            var svc = new Thinktecture.IdentityManager.AspNetIdentity.AspNetIdentityManagerService<IdentityUser, string, IdentityRole, string>(userMgr, roleMgr);
 
             return new DisposableIdentityManagerService(svc, db);
 

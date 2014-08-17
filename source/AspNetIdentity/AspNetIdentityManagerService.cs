@@ -14,17 +14,24 @@ using Thinktecture.IdentityManager;
 
 namespace Thinktecture.IdentityManager.AspNetIdentity
 {
-    public class AspNetIdentityManagerService<TUser, TKey> : IIdentityManagerService
-        where TUser : class, IUser<TKey>, new()
-        where TKey : IEquatable<TKey>
+    public class AspNetIdentityManagerService<TUser, TUserKey, TRole, TRoleKey> : IIdentityManagerService
+        where TUser : class, IUser<TUserKey>, new()
+        where TUserKey : IEquatable<TUserKey>
+        where TRole : class, IRole<TRoleKey>, new()
+        where TRoleKey : IEquatable<TRoleKey>
     {
-        protected Microsoft.AspNet.Identity.UserManager<TUser, TKey> userManager;
-        protected Func<string, TKey> ConvertSubjectToKey;
+        protected Microsoft.AspNet.Identity.UserManager<TUser, TUserKey> userManager;
+        protected Func<string, TUserKey> ConvertUserSubjectToKey;
+
+        protected Microsoft.AspNet.Identity.RoleManager<TRole, TRoleKey> roleManager;
+        protected Func<string, TRoleKey> ConvertRoleSubjectToKey;
+
         Func<Task<IdentityManagerMetadata>> metadataFunc;
 
-        AspNetIdentityManagerService(UserManager<TUser, TKey> userManager)
+        AspNetIdentityManagerService(UserManager<TUser, TUserKey> userManager, RoleManager<TRole, TRoleKey> roleManager)
         {
             if (userManager == null) throw new ArgumentNullException("userManager");
+            if (roleManager == null) throw new ArgumentNullException("roleManager");
 
             if (!userManager.SupportsQueryableUsers)
             {
@@ -32,42 +39,56 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             }
 
             this.userManager = userManager;
+            this.roleManager = roleManager;
 
             if (userManager.UserTokenProvider == null)
             {
-                userManager.UserTokenProvider = new TokenProvider<TUser, TKey>();
+                userManager.UserTokenProvider = new TokenProvider<TUser, TUserKey>();
             }
 
-            var keyType = typeof(TKey);
-            if (keyType == typeof(string)) ConvertSubjectToKey = subject => (TKey)ParseString(subject);
-            else if (keyType == typeof(int)) ConvertSubjectToKey = subject => (TKey)ParseInt(subject);
-            else if (keyType == typeof(long)) ConvertSubjectToKey = subject => (TKey)ParseLong(subject);
-            else if (keyType == typeof(Guid)) ConvertSubjectToKey = subject => (TKey)ParseGuid(subject);
+            var keyType = typeof(TUserKey);
+            if (keyType == typeof(string)) ConvertUserSubjectToKey = subject => (TUserKey)ParseString(subject);
+            else if (keyType == typeof(int)) ConvertUserSubjectToKey = subject => (TUserKey)ParseInt(subject);
+            else if (keyType == typeof(long)) ConvertUserSubjectToKey = subject => (TUserKey)ParseLong(subject);
+            else if (keyType == typeof(Guid)) ConvertUserSubjectToKey = subject => (TUserKey)ParseGuid(subject);
             else
             {
-                throw new InvalidOperationException("Key type not supported");
+                throw new InvalidOperationException("User Key type not supported");
+            }
+
+            keyType = typeof(TRoleKey);
+            if (keyType == typeof(string)) ConvertRoleSubjectToKey = subject => (TRoleKey)ParseString(subject);
+            else if (keyType == typeof(int)) ConvertRoleSubjectToKey = subject => (TRoleKey)ParseInt(subject);
+            else if (keyType == typeof(long)) ConvertRoleSubjectToKey = subject => (TRoleKey)ParseLong(subject);
+            else if (keyType == typeof(Guid)) ConvertRoleSubjectToKey = subject => (TRoleKey)ParseGuid(subject);
+            else
+            {
+                throw new InvalidOperationException("Role Key type not supported");
             }
         }
-        
+
         public AspNetIdentityManagerService(
-            UserManager<TUser, TKey> userManager,
+            UserManager<TUser, TUserKey> userManager,
+            RoleManager<TRole, TRoleKey> roleManager,
             bool includeAccountProperties = true)
-            :this(userManager)
+            : this(userManager, roleManager)
         {
             this.metadataFunc = () => Task.FromResult(GetStandardMetadata(includeAccountProperties));
         }
 
         public AspNetIdentityManagerService(
-           UserManager<TUser, TKey> userManager,
+           UserManager<TUser, TUserKey> userManager,
+            RoleManager<TRole, TRoleKey> roleManager,
            IdentityManagerMetadata metadata)
-            : this(userManager, ()=>Task.FromResult(metadata))
+            : this(userManager, roleManager, () => Task.FromResult(metadata))
         {
         }
-        
+
         public AspNetIdentityManagerService(
-           UserManager<TUser, TKey> userManager,
+           UserManager<TUser, TUserKey> userManager,
+            RoleManager<TRole, TRoleKey> roleManager,
            Func<Task<IdentityManagerMetadata>> metadataFunc)
-            : this(userManager)
+            : this(userManager, roleManager)
         {
             this.metadataFunc = metadataFunc;
         }
@@ -119,7 +140,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             }
 
             var create = new List<PropertyMetadata>();
-            create.Add(PropertyMetadata.FromProperty<TUser>(x => x.UserName, type:Constants.ClaimTypes.Username, required:true));
+            create.Add(PropertyMetadata.FromProperty<TUser>(x => x.UserName, type: Constants.ClaimTypes.Username, required: true));
             create.Add(PropertyMetadata.FromFunctions<TUser, string>(Constants.ClaimTypes.Password, x => null, SetPassword, name: "Password", dataType: PropertyDataType.Password, required: true));
 
             var user = new UserMetadata
@@ -131,9 +152,20 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
                 UpdateProperties = update
             };
 
+            var role = new RoleMetadata
+            {
+                RoleClaimType = Constants.ClaimTypes.Role,
+                SupportsCreate = true,
+                SupportsDelete = true,
+                CreateProperties = new PropertyMetadata[] {
+                    PropertyMetadata.FromProperty<TRole>(x=>x.Name, type:Constants.ClaimTypes.Name, required:true),
+                }
+            };
+
             var meta = new IdentityManagerMetadata
             {
-                UserMetadata = user
+                UserMetadata = user,
+                RoleMetadata = role
             };
             return meta;
         }
@@ -194,7 +226,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return this.metadataFunc();
         }
 
-        public Task<IdentityManagerResult<QueryResult>> QueryUsersAsync(string filter, int start, int count)
+        public Task<IdentityManagerResult<QueryResult<UserSummary>>> QueryUsersAsync(string filter, int start, int count)
         {
             var query =
                 from user in userManager.Users
@@ -213,14 +245,14 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             int total = query.Count();
             var users = query.Skip(start).Take(count).ToArray();
 
-            var result = new QueryResult();
+            var result = new QueryResult<UserSummary>();
             result.Start = start;
             result.Count = count;
             result.Total = total;
             result.Filter = filter;
-            result.Users = users.Select(x =>
+            result.Items = users.Select(x =>
             {
-                var user = new UserResult
+                var user = new UserSummary
                 {
                     Subject = x.Id.ToString(),
                     Username = x.UserName,
@@ -230,7 +262,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
                 return user;
             }).ToArray();
 
-            return Task.FromResult(new IdentityManagerResult<QueryResult>(result));
+            return Task.FromResult(new IdentityManagerResult<QueryResult<UserSummary>>(result));
         }
 
         protected virtual string DisplayNameFromUser(TUser user)
@@ -247,7 +279,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return null;
         }
 
-        public async Task<IdentityManagerResult<CreateResult>> CreateUserAsync(IEnumerable<Thinktecture.IdentityManager.UserClaim> properties)
+        public async Task<IdentityManagerResult<CreateResult>> CreateUserAsync(IEnumerable<Thinktecture.IdentityManager.Property> properties)
         {
             var usernameClaim = properties.Single(x => x.Type == Constants.ClaimTypes.Username);
             var passwordClaim = properties.Single(x => x.Type == Constants.ClaimTypes.Password);
@@ -264,9 +296,9 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             TUser user = new TUser { UserName = username };
             foreach (var prop in otherProperties)
             {
-                SetProperty(createProps, user, prop.Type, prop.Value);
+                SetUserProperty(createProps, user, prop.Type, prop.Value);
             }
-            
+
             var result = await this.userManager.CreateAsync(user, password);
             if (!result.Succeeded)
             {
@@ -278,7 +310,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
 
         public async Task<IdentityManagerResult> DeleteUserAsync(string subject)
         {
-            TKey key = ConvertSubjectToKey(subject);
+            TUserKey key = ConvertUserSubjectToKey(subject);
             var user = await this.userManager.FindByIdAsync(key);
             if (user == null)
             {
@@ -296,7 +328,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
 
         public async Task<IdentityManagerResult<UserDetail>> GetUserAsync(string subject)
         {
-            TKey key = ConvertSubjectToKey(subject);
+            TUserKey key = ConvertUserSubjectToKey(subject);
             var user = await this.userManager.FindByIdAsync(key);
             if (user == null)
             {
@@ -314,20 +346,20 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
 
             var props =
                 from prop in metadata.UserMetadata.UpdateProperties
-                select new UserClaim
+                select new Property
                 {
                     Type = prop.Type,
-                    Value = GetProperty(prop, user)
+                    Value = GetUserProperty(prop, user)
                 };
             result.Properties = props.ToArray();
-            
+
             if (userManager.SupportsUserClaim)
             {
                 var userClaims = await userManager.GetClaimsAsync(key);
-                var claims = new List<Thinktecture.IdentityManager.UserClaim>();
+                var claims = new List<Thinktecture.IdentityManager.Property>();
                 if (userClaims != null)
                 {
-                    claims.AddRange(userClaims.Select(x => new Thinktecture.IdentityManager.UserClaim { Type = x.Type, Value = x.Value }));
+                    claims.AddRange(userClaims.Select(x => new Thinktecture.IdentityManager.Property { Type = x.Type, Value = x.Value }));
                 }
                 result.Claims = claims.ToArray();
             }
@@ -335,42 +367,42 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return new IdentityManagerResult<UserDetail>(result);
         }
 
-        public async Task<IdentityManagerResult> SetPropertyAsync(string subject, string type, string value)
+        public async Task<IdentityManagerResult> SetUserPropertyAsync(string subject, string type, string value)
         {
-            TKey key = ConvertSubjectToKey(subject);
+            TUserKey key = ConvertUserSubjectToKey(subject);
             var user = await this.userManager.FindByIdAsync(key);
             if (user == null)
             {
-                return new IdentityManagerResult<UserDetail>((UserDetail)null);
+                return new IdentityManagerResult("Invalid subject");
             }
 
-            var errors = ValidateProperty(type, value);
+            var errors = ValidateUserProperty(type, value);
             if (errors.Any())
             {
                 return new IdentityManagerResult(errors.ToArray());
             }
 
             var metadata = await GetMetadataAsync();
-            SetProperty(metadata.UserMetadata.UpdateProperties, user, type, value);
-            
-            var result = userManager.Update(user);
+            SetUserProperty(metadata.UserMetadata.UpdateProperties, user, type, value);
+
+            var result = await userManager.UpdateAsync(user);
             if (!result.Succeeded)
             {
-                return new IdentityManagerResult<CreateResult>(result.Errors.ToArray());
+                return new IdentityManagerResult(result.Errors.ToArray());
             }
 
             return IdentityManagerResult.Success;
         }
 
-        public async Task<IdentityManagerResult> AddClaimAsync(string subject, string type, string value)
+        public async Task<IdentityManagerResult> AddUserClaimAsync(string subject, string type, string value)
         {
-            TKey key = ConvertSubjectToKey(subject);
+            TUserKey key = ConvertUserSubjectToKey(subject);
             var user = await this.userManager.FindByIdAsync(key);
             if (user == null)
             {
                 return new IdentityManagerResult("Invalid subject");
-            } 
-            
+            }
+
             var existingClaims = await userManager.GetClaimsAsync(key);
             if (!existingClaims.Any(x => x.Type == type && x.Value == value))
             {
@@ -384,15 +416,15 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return IdentityManagerResult.Success;
         }
 
-        public async Task<IdentityManagerResult> RemoveClaimAsync(string subject, string type, string value)
+        public async Task<IdentityManagerResult> RemoveUserClaimAsync(string subject, string type, string value)
         {
-            TKey key = ConvertSubjectToKey(subject);
+            TUserKey key = ConvertUserSubjectToKey(subject);
             var user = await this.userManager.FindByIdAsync(key);
             if (user == null)
             {
                 return new IdentityManagerResult("Invalid subject");
-            } 
-            
+            }
+
             var result = await this.userManager.RemoveClaimAsync(key, new System.Security.Claims.Claim(type, value));
             if (!result.Succeeded)
             {
@@ -402,12 +434,12 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return IdentityManagerResult.Success;
         }
 
-        private IEnumerable<string> ValidateProperty(string type, string value)
+        private IEnumerable<string> ValidateUserProperty(string type, string value)
         {
             return Enumerable.Empty<string>();
         }
 
-        private string GetProperty(PropertyMetadata propMetadata, TUser user)
+        private string GetUserProperty(PropertyMetadata propMetadata, TUser user)
         {
             string val;
             if (propMetadata.TryGet(user, out val))
@@ -418,9 +450,203 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             throw new Exception("Invalid property type " + propMetadata.Type);
         }
 
-        private void SetProperty(IEnumerable<PropertyMetadata> propsMeta, TUser user, string type, string value)
+        private void SetUserProperty(IEnumerable<PropertyMetadata> propsMeta, TUser user, string type, string value)
         {
             if (propsMeta.TrySet(user, type, value))
+            {
+                return;
+            }
+
+            throw new Exception("Invalid property type " + type);
+        }
+
+
+        void ValidateSupportsRoles()
+        {
+            if (roleManager == null)
+            {
+                throw new InvalidOperationException("Roles Not Supported");
+            }
+        }
+
+        public async Task<IdentityManagerResult<CreateResult>> CreateRoleAsync(IEnumerable<Property> properties)
+        {
+            ValidateSupportsRoles();
+
+            var nameClaim = properties.Single(x => x.Type == Constants.ClaimTypes.Name);
+
+            var name = nameClaim.Value;
+
+            string[] exclude = new string[] { Constants.ClaimTypes.Name };
+            var otherProperties = properties.Where(x => !exclude.Contains(x.Type)).ToArray();
+
+            var metadata = await GetMetadataAsync();
+            var createProps = metadata.RoleMetadata.GetCreateProperties();
+
+            TRole role = new TRole() { Name = name };
+            foreach (var prop in otherProperties)
+            {
+                SetRoleProperty(createProps, role, prop.Type, prop.Value);
+            }
+
+            var result = await this.roleManager.CreateAsync(role);
+            if (!result.Succeeded)
+            {
+                return new IdentityManagerResult<CreateResult>(result.Errors.ToArray());
+            }
+
+            return new IdentityManagerResult<CreateResult>(new CreateResult { Subject = role.Id.ToString() });
+        }
+
+        public async Task<IdentityManagerResult> DeleteRoleAsync(string subject)
+        {
+            ValidateSupportsRoles();
+
+            TRoleKey key = ConvertRoleSubjectToKey(subject);
+            var role = await this.roleManager.FindByIdAsync(key);
+            if (role == null)
+            {
+                return new IdentityManagerResult("Invalid subject");
+            }
+
+            var result = await this.roleManager.DeleteAsync(role);
+            if (!result.Succeeded)
+            {
+                return new IdentityManagerResult<CreateResult>(result.Errors.ToArray());
+            }
+
+            return IdentityManagerResult.Success;
+        }
+
+        public async Task<IdentityManagerResult<RoleDetail>> GetRoleAsync(string subject)
+        {
+            ValidateSupportsRoles();
+
+            TRoleKey key = ConvertRoleSubjectToKey(subject);
+            var role = await this.roleManager.FindByIdAsync(key);
+            if (role == null)
+            {
+                return new IdentityManagerResult<RoleDetail>((RoleDetail)null);
+            }
+
+            var result = new RoleDetail
+            {
+                Subject = subject,
+                Name = role.Name,
+                // Description
+            };
+
+            var metadata = await GetMetadataAsync();
+
+            var props =
+                from prop in metadata.RoleMetadata.UpdateProperties
+                select new Property
+                {
+                    Type = prop.Type,
+                    Value = GetRoleProperty(prop, role)
+                };
+            result.Properties = props.ToArray();
+
+            return new IdentityManagerResult<RoleDetail>(result);
+        }
+
+        public Task<IdentityManagerResult<QueryResult<RoleSummary>>> QueryRolesAsync(string filter, int start, int count)
+        {
+            ValidateSupportsRoles();
+
+            if (start < 0) start = 0;
+            if (count < 0) count = Int32.MaxValue;
+
+            var query =
+                from role in roleManager.Roles
+                orderby role.Name
+                select role;
+
+            if (!String.IsNullOrWhiteSpace(filter))
+            {
+                query =
+                    from role in query
+                    where role.Name.Contains(filter)
+                    orderby role.Name
+                    select role;
+            }
+
+            int total = query.Count();
+            var roles = query.Skip(start).Take(count).ToArray();
+
+            var result = new QueryResult<RoleSummary>();
+            result.Start = start;
+            result.Count = count;
+            result.Total = total;
+            result.Filter = filter;
+            result.Items = roles.Select(x =>
+            {
+                var user = new RoleSummary
+                {
+                    Subject = x.Id.ToString(),
+                    Name = x.Name,
+                    // Description
+                };
+
+                return user;
+            }).ToArray();
+
+            return Task.FromResult(new IdentityManagerResult<QueryResult<RoleSummary>>(result));
+        }
+
+        public async Task<IdentityManagerResult> SetRolePropertyAsync(string subject, string type, string value)
+        {
+            ValidateSupportsRoles();
+
+            TRoleKey key = ConvertRoleSubjectToKey(subject);
+            var role = await this.roleManager.FindByIdAsync(key);
+            if (role == null)
+            {
+                return new IdentityManagerResult("Invalid subject");
+            }
+
+            var errors = ValidateRoleProperty(type, value);
+            if (errors.Any())
+            {
+                return new IdentityManagerResult(errors.ToArray());
+            }
+
+            var metadata = await GetMetadataAsync();
+            SetRoleProperty(metadata.RoleMetadata.UpdateProperties, role, type, value);
+
+            var result = await roleManager.UpdateAsync(role);
+            if (!result.Succeeded)
+            {
+                return new IdentityManagerResult(result.Errors.ToArray());
+            }
+
+            return IdentityManagerResult.Success;
+        }
+
+        IEnumerable<string> ValidateRoleProperties(IEnumerable<Property> properties)
+        {
+            return properties.Select(x => ValidateRoleProperty(x.Type, x.Value)).Aggregate((x, y) => x.Concat(y));
+        }
+
+        private IEnumerable<string> ValidateRoleProperty(string type, string value)
+        {
+            return Enumerable.Empty<string>();
+        }
+
+        private string GetRoleProperty(PropertyMetadata propMetadata, TRole role)
+        {
+            string val;
+            if (propMetadata.TryGet(role, out val))
+            {
+                return val;
+            }
+
+            throw new Exception("Invalid property type " + propMetadata.Type);
+        }
+
+        private void SetRoleProperty(IEnumerable<PropertyMetadata> propsMeta, TRole role, string type, string value)
+        {
+            if (propsMeta.TrySet(role, type, value))
             {
                 return;
             }
