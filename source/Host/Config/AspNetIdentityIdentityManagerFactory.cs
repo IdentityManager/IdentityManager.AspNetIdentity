@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Web;
 using Thinktecture.IdentityManager;
 
@@ -29,8 +30,17 @@ namespace Thinktecture.IdentityManager.Host
             var userMgr = new Microsoft.AspNet.Identity.UserManager<IdentityUser>(userStore);
             var roleStore = new RoleStore<IdentityRole>(db);
             var roleMgr = new Microsoft.AspNet.Identity.RoleManager<IdentityRole>(roleStore);
-            
-            var svc = new Thinktecture.IdentityManager.AspNetIdentity.AspNetIdentityManagerService<IdentityUser, string, IdentityRole, string>(userMgr, roleMgr);
+
+            Thinktecture.IdentityManager.AspNetIdentity.AspNetIdentityManagerService<IdentityUser, string, IdentityRole, string> svc = null;
+            svc = new Thinktecture.IdentityManager.AspNetIdentity.AspNetIdentityManagerService<IdentityUser, string, IdentityRole, string>(userMgr, roleMgr, () =>
+            {
+                var meta = svc.GetStandardMetadata();
+                meta.UserMetadata.UpdateProperties =
+                    meta.UserMetadata.UpdateProperties.Union(new PropertyMetadata[]{
+                        svc.GetMetadataForClaim(Constants.ClaimTypes.Name, "Name")
+                    });
+                return Task.FromResult(meta);
+            });
 
             return new DisposableIdentityManagerService(svc, db);
 

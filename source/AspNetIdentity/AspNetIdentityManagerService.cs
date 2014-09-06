@@ -132,8 +132,6 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
                 update.Add(PropertyMetadata.FromFunctions<TUser, string>(Constants.ClaimTypes.Phone, GetPhone, SetPhone, name: "Phone", dataType: PropertyDataType.String));
             }
 
-            update.Add(PropertyMetadata.FromFunctions<TUser, string>(Constants.ClaimTypes.Name, GetName, SetName, name: "Name", dataType: PropertyDataType.String));
-
             if (includeAccountProperties)
             {
                 update.AddRange(PropertyMetadata.FromType<TUser>());
@@ -170,17 +168,41 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return meta;
         }
 
-        protected void SetPassword(TUser user, string password)
+        public PropertyMetadata GetMetadataForClaim(string type, string name = null, PropertyDataType dataType = PropertyDataType.String, bool required = false)
+        {
+            return PropertyMetadata.FromFunctions<TUser, string>(type, GetForClaim(type), SetForClaim(type), name, dataType, required);
+        }
+        public Func<TUser, string> GetForClaim(string type)
+        {
+            return user => userManager.GetClaims(user.Id).Where(x => x.Type == type).Select(x => x.Value).FirstOrDefault();
+        }
+        public Action<TUser, string> SetForClaim(string type)
+        {
+            return (user, value) =>
+            {
+                var claims = this.userManager.GetClaims(user.Id).Where(x => x.Type == type).ToArray();
+                foreach (var claim in claims)
+                {
+                    this.userManager.RemoveClaim(user.Id, claim);
+                }
+                if (!String.IsNullOrWhiteSpace(value))
+                {
+                    this.userManager.AddClaim(user.Id, new Claim(type, value));
+                }
+            };
+        }
+
+        public void SetPassword(TUser user, string password)
         {
             var token = this.userManager.GeneratePasswordResetToken(user.Id);
             this.userManager.ResetPassword(user.Id, token, password);
         }
 
-        protected string GetEmail(TUser user)
+        public string GetEmail(TUser user)
         {
             return userManager.GetEmail(user.Id);
         }
-        protected void SetEmail(TUser user, string email)
+        public void SetEmail(TUser user, string email)
         {
             this.userManager.SetEmail(user.Id, email);
             if (!String.IsNullOrWhiteSpace(email))
@@ -190,34 +212,17 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             }
         }
 
-        protected string GetPhone(TUser user)
+        public string GetPhone(TUser user)
         {
             return userManager.GetPhoneNumber(user.Id);
         }
-        protected void SetPhone(TUser user, string phone)
+        public void SetPhone(TUser user, string phone)
         {
             this.userManager.SetPhoneNumber(user.Id, phone);
             if (!String.IsNullOrWhiteSpace(phone))
             {
                 var token = this.userManager.GenerateChangePhoneNumberToken(user.Id, phone);
                 this.userManager.ChangePhoneNumberAsync(user.Id, phone, token);
-            }
-        }
-
-        protected string GetName(TUser user)
-        {
-            return userManager.GetClaims(user.Id).Where(x => x.Type == Constants.ClaimTypes.Name).Select(x => x.Value).FirstOrDefault();
-        }
-        protected void SetName(TUser user, string name)
-        {
-            var claims = this.userManager.GetClaims(user.Id).Where(x => x.Type == Constants.ClaimTypes.Name).ToArray();
-            foreach (var claim in claims)
-            {
-                this.userManager.RemoveClaim(user.Id, claim);
-            }
-            if (!String.IsNullOrWhiteSpace(name))
-            {
-                this.userManager.AddClaim(user.Id, new Claim(Constants.ClaimTypes.Name, name));
             }
         }
 
