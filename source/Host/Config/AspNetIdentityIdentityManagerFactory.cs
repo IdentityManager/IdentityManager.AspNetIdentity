@@ -32,15 +32,18 @@ namespace Thinktecture.IdentityManager.Host
             var roleMgr = new Microsoft.AspNet.Identity.RoleManager<IdentityRole>(roleStore);
 
             Thinktecture.IdentityManager.AspNetIdentity.AspNetIdentityManagerService<IdentityUser, string, IdentityRole, string> svc = null;
-            svc = new Thinktecture.IdentityManager.AspNetIdentity.AspNetIdentityManagerService<IdentityUser, string, IdentityRole, string>(userMgr, roleMgr, () =>
-            {
-                var meta = svc.GetStandardMetadata();
-                meta.UserMetadata.UpdateProperties =
-                    meta.UserMetadata.UpdateProperties.Union(new PropertyMetadata[]{
-                        svc.GetMetadataForClaim(Constants.ClaimTypes.Name, "Name")
-                    });
-                return Task.FromResult(meta);
-            });
+            svc = new Thinktecture.IdentityManager.AspNetIdentity.AspNetIdentityManagerService<IdentityUser, string, IdentityRole, string>(userMgr, roleMgr);
+
+            // uncomment to add other properties that are mapped to claims
+            //svc = new Thinktecture.IdentityManager.AspNetIdentity.AspNetIdentityManagerService<IdentityUser, string, IdentityRole, string>(userMgr, roleMgr, () =>
+            //{
+            //    var meta = svc.GetStandardMetadata();
+            //    meta.UserMetadata.UpdateProperties =
+            //        meta.UserMetadata.UpdateProperties.Union(new PropertyMetadata[]{
+            //            svc.GetMetadataForClaim(Constants.ClaimTypes.Name, "Name")
+            //        });
+            //    return Task.FromResult(meta);
+            //});
 
             return new DisposableIdentityManagerService(svc, db);
 
