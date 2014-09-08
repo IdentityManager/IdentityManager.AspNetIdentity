@@ -284,7 +284,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return null;
         }
 
-        public async Task<IdentityManagerResult<CreateResult>> CreateUserAsync(IEnumerable<Thinktecture.IdentityManager.Property> properties)
+        public async Task<IdentityManagerResult<CreateResult>> CreateUserAsync(IEnumerable<Thinktecture.IdentityManager.PropertyValue> properties)
         {
             var usernameClaim = properties.Single(x => x.Type == Constants.ClaimTypes.Username);
             var passwordClaim = properties.Single(x => x.Type == Constants.ClaimTypes.Password);
@@ -351,7 +351,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
 
             var props =
                 from prop in metadata.UserMetadata.UpdateProperties
-                select new Property
+                select new PropertyValue
                 {
                     Type = prop.Type,
                     Value = GetUserProperty(prop, user)
@@ -361,10 +361,10 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             if (userManager.SupportsUserClaim)
             {
                 var userClaims = await userManager.GetClaimsAsync(key);
-                var claims = new List<Thinktecture.IdentityManager.Property>();
+                var claims = new List<Thinktecture.IdentityManager.ClaimValue>();
                 if (userClaims != null)
                 {
-                    claims.AddRange(userClaims.Select(x => new Thinktecture.IdentityManager.Property { Type = x.Type, Value = x.Value }));
+                    claims.AddRange(userClaims.Select(x => new Thinktecture.IdentityManager.ClaimValue { Type = x.Type, Value = x.Value }));
                 }
                 result.Claims = claims.ToArray();
             }
@@ -474,7 +474,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             }
         }
 
-        public async Task<IdentityManagerResult<CreateResult>> CreateRoleAsync(IEnumerable<Property> properties)
+        public async Task<IdentityManagerResult<CreateResult>> CreateRoleAsync(IEnumerable<PropertyValue> properties)
         {
             ValidateSupportsRoles();
 
@@ -545,7 +545,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
 
             var props =
                 from prop in metadata.RoleMetadata.UpdateProperties
-                select new Property
+                select new PropertyValue
                 {
                     Type = prop.Type,
                     Value = GetRoleProperty(prop, role)
@@ -628,7 +628,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return IdentityManagerResult.Success;
         }
 
-        IEnumerable<string> ValidateRoleProperties(IEnumerable<Property> properties)
+        IEnumerable<string> ValidateRoleProperties(IEnumerable<PropertyValue> properties)
         {
             return properties.Select(x => ValidateRoleProperty(x.Type, x.Value)).Aggregate((x, y) => x.Concat(y));
         }
