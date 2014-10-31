@@ -88,7 +88,7 @@
     <Reference Include="System.Xml.Linq" />
     <Reference Include="Thinktecture.IdentityManager, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Thinktecture.IdentityManager.1.0.0-pre-20101031\lib\net45\Thinktecture.IdentityManager.dll</HintPath>
+      <HintPath>..\packages\Thinktecture.IdentityManager.1.0.0-pre-20141031\lib\net45\Thinktecture.IdentityManager.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
