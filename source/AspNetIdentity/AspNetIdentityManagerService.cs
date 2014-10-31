@@ -187,54 +187,90 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
         {
             return user => userManager.GetClaims(user.Id).Where(x => x.Type == type).Select(x => x.Value).FirstOrDefault();
         }
-        public Action<TUser, string> SetForClaim(string type)
+        public Func<TUser, string, IdentityManagerResult> SetForClaim(string type)
         {
             return (user, value) =>
             {
                 var claims = this.userManager.GetClaims(user.Id).Where(x => x.Type == type).ToArray();
                 foreach (var claim in claims)
                 {
-                    this.userManager.RemoveClaim(user.Id, claim);
+                    var result = this.userManager.RemoveClaim(user.Id, claim);
+                    if (!result.Succeeded)
+                    {
+                        return new IdentityManagerResult(result.Errors.First());
+                    }
                 }
                 if (!String.IsNullOrWhiteSpace(value))
                 {
-                    this.userManager.AddClaim(user.Id, new Claim(type, value));
+                    var result = this.userManager.AddClaim(user.Id, new Claim(type, value));
+                    if (!result.Succeeded)
+                    {
+                        return new IdentityManagerResult(result.Errors.First());
+                    }
                 }
+                return IdentityManagerResult.Success;
             };
         }
 
-        public void SetPassword(TUser user, string password)
+        public IdentityManagerResult SetPassword(TUser user, string password)
         {
             var token = this.userManager.GeneratePasswordResetToken(user.Id);
-            this.userManager.ResetPassword(user.Id, token, password);
+            var result = this.userManager.ResetPassword(user.Id, token, password);
+            if (!result.Succeeded)
+            {
+                return new IdentityManagerResult(result.Errors.First());
+            }
+            return IdentityManagerResult.Success;
         }
 
         public string GetEmail(TUser user)
         {
             return userManager.GetEmail(user.Id);
         }
-        public void SetEmail(TUser user, string email)
+        public IdentityManagerResult SetEmail(TUser user, string email)
         {
-            this.userManager.SetEmail(user.Id, email);
+            var result = this.userManager.SetEmail(user.Id, email);
+            if (!result.Succeeded)
+            {
+                return new IdentityManagerResult(result.Errors.First());
+            }
+            
             if (!String.IsNullOrWhiteSpace(email))
             {
                 var token = this.userManager.GenerateEmailConfirmationToken(user.Id);
-                this.userManager.ConfirmEmail(user.Id, token);
+                result = this.userManager.ConfirmEmail(user.Id, token);
+                if (!result.Succeeded)
+                {
+                    return new IdentityManagerResult(result.Errors.First());
+                }
             }
+            
+            return IdentityManagerResult.Success;
         }
 
         public string GetPhone(TUser user)
         {
             return userManager.GetPhoneNumber(user.Id);
         }
-        public void SetPhone(TUser user, string phone)
+        public IdentityManagerResult SetPhone(TUser user, string phone)
         {
-            this.userManager.SetPhoneNumber(user.Id, phone);
+            var result = this.userManager.SetPhoneNumber(user.Id, phone);
+            if (!result.Succeeded)
+            {
+                return new IdentityManagerResult(result.Errors.First());
+            }
+            
             if (!String.IsNullOrWhiteSpace(phone))
             {
                 var token = this.userManager.GenerateChangePhoneNumberToken(user.Id, phone);
-                this.userManager.ChangePhoneNumberAsync(user.Id, phone, token);
+                result = this.userManager.ChangePhoneNumber(user.Id, phone, token);
+                if (!result.Succeeded)
+                {
+                    return new IdentityManagerResult(result.Errors.First());
+                }
             }
+            
+            return IdentityManagerResult.Success;
         }
 
         public Task<IdentityManagerMetadata> GetMetadataAsync()
@@ -312,7 +348,11 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             TUser user = new TUser { UserName = username };
             foreach (var prop in otherProperties)
             {
-                SetUserProperty(createProps, user, prop.Type, prop.Value);
+                var propertyResult = SetUserProperty(createProps, user, prop.Type, prop.Value);
+                if (!propertyResult.IsSuccess)
+                {
+                    return new IdentityManagerResult<CreateResult>(propertyResult.Errors.ToArray());
+                }
             }
 
             var result = await this.userManager.CreateAsync(user, password);
@@ -399,7 +439,11 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             }
 
             var metadata = await GetMetadataAsync();
-            SetUserProperty(metadata.UserMetadata.UpdateProperties, user, type, value);
+            var propResult = SetUserProperty(metadata.UserMetadata.UpdateProperties, user, type, value);
+            if (!propResult.IsSuccess)
+            {
+                return propResult;
+            }
 
             var result = await userManager.UpdateAsync(user);
             if (!result.Succeeded)
@@ -466,11 +510,12 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             throw new Exception("Invalid property type " + propMetadata.Type);
         }
 
-        private void SetUserProperty(IEnumerable<PropertyMetadata> propsMeta, TUser user, string type, string value)
+        private IdentityManagerResult SetUserProperty(IEnumerable<PropertyMetadata> propsMeta, TUser user, string type, string value)
         {
-            if (propsMeta.TrySet(user, type, value))
+            IdentityManagerResult result;
+            if (propsMeta.TrySet(user, type, value, out result))
             {
-                return;
+                return result;
             }
 
             throw new Exception("Invalid property type " + type);
@@ -502,7 +547,11 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             TRole role = new TRole() { Name = name };
             foreach (var prop in otherProperties)
             {
-                SetRoleProperty(createProps, role, prop.Type, prop.Value);
+                var roleResult = SetRoleProperty(createProps, role, prop.Type, prop.Value);
+                if (!roleResult.IsSuccess)
+                {
+                    return new IdentityManagerResult<CreateResult>(roleResult.Errors.ToArray());
+                }
             }
 
             var result = await this.roleManager.CreateAsync(role);
@@ -628,10 +677,14 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             }
 
             var metadata = await GetMetadataAsync();
-            SetRoleProperty(metadata.RoleMetadata.UpdateProperties, role, type, value);
+            var result = SetRoleProperty(metadata.RoleMetadata.UpdateProperties, role, type, value);
+            if (!result.IsSuccess)
+            {
+                return result;
+            }
 
-            var result = await roleManager.UpdateAsync(role);
-            if (!result.Succeeded)
+            var updateResult = await roleManager.UpdateAsync(role);
+            if (!updateResult.Succeeded)
             {
                 return new IdentityManagerResult(result.Errors.ToArray());
             }
@@ -660,11 +713,12 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             throw new Exception("Invalid property type " + propMetadata.Type);
         }
 
-        private void SetRoleProperty(IEnumerable<PropertyMetadata> propsMeta, TRole role, string type, string value)
+        private IdentityManagerResult SetRoleProperty(IEnumerable<PropertyMetadata> propsMeta, TRole role, string type, string value)
         {
-            if (propsMeta.TrySet(role, type, value))
+            IdentityManagerResult result;
+            if (propsMeta.TrySet(role, type, value, out result))
             {
-                return;
+                return result;
             }
 
             throw new Exception("Invalid property type " + type);
