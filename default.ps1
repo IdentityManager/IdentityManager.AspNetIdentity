@@ -55,7 +55,7 @@ task CreateNuGetPackage -depends Compile {
 	$patch = $vSplit[2]
 	$packageVersion =  "$major.$minor.$patch"
 	if($preRelease){
-		$packageVersion = "$packageVersion-$preRelease" 
+		$packageVersion = "$packageVersion-$preRelease-$buildNumber"
 	}
 
 	md $dist_directory
