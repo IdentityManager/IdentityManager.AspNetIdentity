@@ -39,7 +39,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
 
         Func<Task<IdentityManagerMetadata>> metadataFunc;
 
-        AspNetIdentityManagerService(UserManager<TUser, TUserKey> userManager, RoleManager<TRole, TRoleKey> roleManager)
+        AspNetIdentityManagerService(UserManager<TUser, TUserKey> userManager, RoleManager<TRole, TRoleKey> roleManager, Func<string, TUserKey> parseUserSubject = null, Func<string, TRoleKey> parseRoleSubject = null)
         {
             if (userManager == null) throw new ArgumentNullException("userManager");
             if (roleManager == null) throw new ArgumentNullException("roleManager");
@@ -57,49 +57,68 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
                 userManager.UserTokenProvider = new TokenProvider<TUser, TUserKey>();
             }
 
-            var keyType = typeof(TUserKey);
-            if (keyType == typeof(string)) ConvertUserSubjectToKey = subject => (TUserKey)ParseString(subject);
-            else if (keyType == typeof(int)) ConvertUserSubjectToKey = subject => (TUserKey)ParseInt(subject);
-            else if (keyType == typeof(long)) ConvertUserSubjectToKey = subject => (TUserKey)ParseLong(subject);
-            else if (keyType == typeof(Guid)) ConvertUserSubjectToKey = subject => (TUserKey)ParseGuid(subject);
+            if (parseUserSubject != null)
+            {
+                ConvertUserSubjectToKey = parseUserSubject;
+            }
             else
             {
-                throw new InvalidOperationException("User Key type not supported");
+                var keyType = typeof (TUserKey);
+                if (keyType == typeof (string)) ConvertUserSubjectToKey = subject => (TUserKey) ParseString(subject);
+                else if (keyType == typeof (int)) ConvertUserSubjectToKey = subject => (TUserKey) ParseInt(subject);
+                else if (keyType == typeof (uint)) ConvertUserSubjectToKey = subject => (TUserKey) ParseUInt32(subject);
+                else if (keyType == typeof (long)) ConvertUserSubjectToKey = subject => (TUserKey) ParseLong(subject);
+                else if (keyType == typeof (Guid)) ConvertUserSubjectToKey = subject => (TUserKey) ParseGuid(subject);
+                else
+                {
+                    throw new InvalidOperationException("User Key type not supported");
+                }
             }
 
-            keyType = typeof(TRoleKey);
-            if (keyType == typeof(string)) ConvertRoleSubjectToKey = subject => (TRoleKey)ParseString(subject);
-            else if (keyType == typeof(int)) ConvertRoleSubjectToKey = subject => (TRoleKey)ParseInt(subject);
-            else if (keyType == typeof(long)) ConvertRoleSubjectToKey = subject => (TRoleKey)ParseLong(subject);
-            else if (keyType == typeof(Guid)) ConvertRoleSubjectToKey = subject => (TRoleKey)ParseGuid(subject);
+            if (parseRoleSubject != null)
+            {
+                ConvertRoleSubjectToKey = parseRoleSubject;
+            }
             else
             {
-                throw new InvalidOperationException("Role Key type not supported");
+                var keyType = typeof (TRoleKey);
+                if (keyType == typeof (string)) ConvertRoleSubjectToKey = subject => (TRoleKey) ParseString(subject);
+                else if (keyType == typeof (int)) ConvertRoleSubjectToKey = subject => (TRoleKey) ParseInt(subject);
+                else if (keyType == typeof (uint)) ConvertUserSubjectToKey = subject => (TUserKey) ParseUInt32(subject);
+                else if (keyType == typeof (long)) ConvertRoleSubjectToKey = subject => (TRoleKey) ParseLong(subject);
+                else if (keyType == typeof (Guid)) ConvertRoleSubjectToKey = subject => (TRoleKey) ParseGuid(subject);
+                else
+                {
+                    throw new InvalidOperationException("Role Key type not supported");
+                }
             }
         }
 
         public AspNetIdentityManagerService(
             UserManager<TUser, TUserKey> userManager,
             RoleManager<TRole, TRoleKey> roleManager,
-            bool includeAccountProperties = true)
-            : this(userManager, roleManager)
+            bool includeAccountProperties = true,
+            Func<string, TUserKey> parseUserSubject = null, Func<string, TRoleKey> parseRoleSubject = null)
+            : this(userManager, roleManager, parseUserSubject, parseRoleSubject)
         {
             this.metadataFunc = () => Task.FromResult(GetStandardMetadata(includeAccountProperties));
         }
 
         public AspNetIdentityManagerService(
            UserManager<TUser, TUserKey> userManager,
-            RoleManager<TRole, TRoleKey> roleManager,
-           IdentityManagerMetadata metadata)
-            : this(userManager, roleManager, () => Task.FromResult(metadata))
+           RoleManager<TRole, TRoleKey> roleManager,
+           IdentityManagerMetadata metadata,
+           Func<string, TUserKey> parseUserSubject = null, Func<string, TRoleKey> parseRoleSubject = null)
+            : this(userManager, roleManager, () => Task.FromResult(metadata), parseUserSubject, parseRoleSubject)
         {
         }
 
         public AspNetIdentityManagerService(
            UserManager<TUser, TUserKey> userManager,
-            RoleManager<TRole, TRoleKey> roleManager,
-           Func<Task<IdentityManagerMetadata>> metadataFunc)
-            : this(userManager, roleManager)
+           RoleManager<TRole, TRoleKey> roleManager,
+           Func<Task<IdentityManagerMetadata>> metadataFunc,
+           Func<string, TUserKey> parseUserSubject = null, Func<string, TRoleKey> parseRoleSubject = null)
+            : this(userManager, roleManager, parseUserSubject, parseRoleSubject)
         {
             this.metadataFunc = metadataFunc;
         }
@@ -112,6 +131,12 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
         {
             int key;
             if (!Int32.TryParse(sub, out key)) return 0;
+            return key;
+        }
+        object ParseUInt32(string sub)
+        {
+            uint key;
+            if (!UInt32.TryParse(sub, out key)) return 0;
             return key;
         }
         object ParseLong(string sub)
