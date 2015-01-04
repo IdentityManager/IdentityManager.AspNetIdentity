@@ -84,7 +84,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
                 var keyType = typeof (TRoleKey);
                 if (keyType == typeof (string)) ConvertRoleSubjectToKey = subject => (TRoleKey) ParseString(subject);
                 else if (keyType == typeof (int)) ConvertRoleSubjectToKey = subject => (TRoleKey) ParseInt(subject);
-                else if (keyType == typeof (uint)) ConvertUserSubjectToKey = subject => (TUserKey) ParseUInt32(subject);
+                else if (keyType == typeof (uint)) ConvertRoleSubjectToKey = subject => (TRoleKey) ParseUInt32(subject);
                 else if (keyType == typeof (long)) ConvertRoleSubjectToKey = subject => (TRoleKey) ParseLong(subject);
                 else if (keyType == typeof (Guid)) ConvertRoleSubjectToKey = subject => (TRoleKey) ParseGuid(subject);
                 else
