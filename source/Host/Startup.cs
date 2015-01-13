@@ -26,8 +26,8 @@ namespace Thinktecture.IdentityManager.Host
         {
             var factory = new IdentityManagerServiceFactory();
             
-            //factory.ConfigureSimpleIdentityManagerService("AspId");
-            factory.ConfigureCustomIdentityManagerServiceWithIntKeys("AspId_CustomPK");
+            factory.ConfigureSimpleIdentityManagerService("AspId");
+            //factory.ConfigureCustomIdentityManagerServiceWithIntKeys("AspId_CustomPK");
 
             app.UseIdentityManager(new IdentityManagerOptions()
             {
