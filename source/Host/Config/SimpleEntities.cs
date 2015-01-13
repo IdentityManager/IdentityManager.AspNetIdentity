@@ -22,31 +22,48 @@ using System.Web;
 
 namespace Thinktecture.IdentityManager.Host
 {
-    public class CustomDbContext : IdentityDbContext<CustomUser, CustomRole, int, CustomUserLogin, CustomUserRole, CustomUserClaim>
+    public class User : IdentityUser { }
+    public class Role : IdentityRole { }
+
+    public class Context : IdentityDbContext<User, Role, string, IdentityUserLogin, IdentityUserRole, IdentityUserClaim>
     {
-        public CustomDbContext(string connString)
+        public Context(string connString)
             : base(connString)
         {
         }
     }
-    public class CustomUserStore : UserStore<CustomUser, CustomRole, int, CustomUserLogin, CustomUserRole, CustomUserClaim>
+
+    public class UserStore : UserStore<User>
     {
-        public CustomUserStore(CustomDbContext ctx)
+        public UserStore(Context ctx)
             : base(ctx)
         {
         }
     }
-    public class CustomUser : IdentityUser<int, CustomUserLogin, CustomUserRole, CustomUserClaim> { }
-    public class CustomRole : IdentityRole<int, CustomUserRole> { }
-    public class CustomUserLogin : IdentityUserLogin<int> { }
-    public class CustomUserRole : IdentityUserRole<int> { }
-    public class CustomUserClaim : IdentityUserClaim<int> { }
 
-    public class CustomUserManager : UserManager<CustomUser, int>
+    public class UserManager : UserManager<User>
     {
-        public CustomUserManager(CustomUserStore store)
+        public UserManager(UserStore store)
             : base(store)
         {
         }
     }
+    
+    public class RoleStore : RoleStore<Role>
+    {
+        public RoleStore(Context ctx)
+            : base(ctx)
+        {
+        }
+    }
+
+    public class RoleManager : RoleManager<Role>
+    {
+        public RoleManager(RoleStore store)
+            : base(store)
+        {
+        }
+    }
+
+
 }

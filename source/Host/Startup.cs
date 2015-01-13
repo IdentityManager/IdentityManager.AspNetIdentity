@@ -15,6 +15,8 @@
  */
 
 using Owin;
+using Thinktecture.IdentityManager.Configuration;
+using Thinktecture.IdentityManager.Host.Config;
 
 namespace Thinktecture.IdentityManager.Host
 {
@@ -22,10 +24,14 @@ namespace Thinktecture.IdentityManager.Host
     {
         public void Configuration(IAppBuilder app)
         {
-            var factory = new Thinktecture.IdentityManager.Host.AspNetIdentityIdentityManagerFactory("AspId");
-            app.UseIdentityManager(new IdentityManagerConfiguration()
+            var factory = new IdentityManagerServiceFactory();
+            
+            factory.ConfigureSimpleIdentityManagerService("AspId");
+            //factory.ConfigureCustomIdentityManagerServiceWithIntKeys("AspId_CustomPK");
+
+            app.UseIdentityManager(new IdentityManagerOptions()
             {
-                IdentityManagerFactory = factory.Create
+                Factory = factory
             });
         }
     }

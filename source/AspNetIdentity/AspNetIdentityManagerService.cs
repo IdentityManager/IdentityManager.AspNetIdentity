@@ -57,11 +57,12 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
                 userManager.UserTokenProvider = new TokenProvider<TUser, TUserKey>();
             }
 
-            if (parseUserSubject != null)
-            {
-                ConvertUserSubjectToKey = parseUserSubject;
-            }
-            else
+            var keyType = typeof(TUserKey);
+            if (keyType == typeof(string)) ConvertUserSubjectToKey = subject => (TUserKey)ParseString(subject);
+            else if (keyType == typeof(int)) ConvertUserSubjectToKey = subject => (TUserKey)ParseInt(subject);
+            else if (keyType == typeof(uint)) ConvertUserSubjectToKey = subject => (TUserKey)ParseUInt32(subject);
+            else if (keyType == typeof(long)) ConvertUserSubjectToKey = subject => (TUserKey)ParseLong(subject);
+            else if (keyType == typeof(Guid)) ConvertUserSubjectToKey = subject => (TUserKey)ParseGuid(subject);            else
             {
                 var keyType = typeof (TUserKey);
                 if (keyType == typeof (string)) ConvertUserSubjectToKey = subject => (TUserKey) ParseString(subject);
@@ -75,10 +76,12 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
                 }
             }
 
-            if (parseRoleSubject != null)
-            {
-                ConvertRoleSubjectToKey = parseRoleSubject;
-            }
+            keyType = typeof(TRoleKey);
+            if (keyType == typeof(string)) ConvertRoleSubjectToKey = subject => (TRoleKey)ParseString(subject);
+            else if (keyType == typeof(int)) ConvertRoleSubjectToKey = subject => (TRoleKey)ParseInt(subject);
+            else if (keyType == typeof(uint)) ConvertRoleSubjectToKey = subject => (TRoleKey)ParseUInt32(subject);
+            else if (keyType == typeof(long)) ConvertRoleSubjectToKey = subject => (TRoleKey)ParseLong(subject);
+            else if (keyType == typeof(Guid)) ConvertRoleSubjectToKey = subject => (TRoleKey)ParseGuid(subject);
             else
             {
                 var keyType = typeof (TRoleKey);
@@ -149,6 +152,12 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
         {
             Guid key;
             if (!Guid.TryParse(sub, out key)) return Guid.Empty;
+            return key;
+        }
+        object ParseUInt32(string sub)
+        {
+            uint key;
+            if (!UInt32.TryParse(sub, out key)) return 0;
             return key;
         }
 
