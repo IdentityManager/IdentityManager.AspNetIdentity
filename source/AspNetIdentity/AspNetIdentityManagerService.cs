@@ -39,7 +39,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
 
         Func<Task<IdentityManagerMetadata>> metadataFunc;
 
-        AspNetIdentityManagerService(UserManager<TUser, TUserKey> userManager, RoleManager<TRole, TRoleKey> roleManager)
+        AspNetIdentityManagerService(UserManager<TUser, TUserKey> userManager, RoleManager<TRole, TRoleKey> roleManager, Func<string, TUserKey> parseUserSubject = null, Func<string, TRoleKey> parseRoleSubject = null)
         {
             if (userManager == null) throw new ArgumentNullException("userManager");
             if (roleManager == null) throw new ArgumentNullException("roleManager");
