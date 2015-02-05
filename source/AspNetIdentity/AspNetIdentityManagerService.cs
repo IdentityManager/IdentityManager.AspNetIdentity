@@ -167,6 +167,11 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             {
                 update.Add(PropertyMetadata.FromFunctions<TUser, string>(Constants.ClaimTypes.Phone, GetPhone, SetPhone, name: "Phone", dataType: PropertyDataType.String));
             }
+            if (this.userManager.SupportsUserLockout)
+            {
+                update.Add(PropertyMetadata.FromFunctions<TUser, bool>("locked_enabled", GetLockoutEnabled, SetLockoutEnabled, name: "Lockout Enabled", dataType: PropertyDataType.Boolean));
+                update.Add(PropertyMetadata.FromFunctions<TUser, bool>("locked", GetLockedOut, SetLockedOut, name: "Locked Out", dataType: PropertyDataType.Boolean));
+            }
 
             if (includeAccountProperties)
             {
@@ -295,6 +300,47 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
                 }
             }
             
+            return IdentityManagerResult.Success;
+        }
+
+        public bool GetLockoutEnabled(TUser user)
+        {
+            return userManager.GetLockoutEnabled(user.Id);
+        }
+        public IdentityManagerResult SetLockoutEnabled(TUser user, bool enabled)
+        {
+            var result = userManager.SetLockoutEnabled(user.Id, enabled);
+            if (!result.Succeeded)
+            {
+                return new IdentityManagerResult(result.Errors.First());
+            }
+
+            return IdentityManagerResult.Success;
+        }
+
+        public bool GetLockedOut(TUser user)
+        {
+            return userManager.GetLockoutEndDate(user.Id) > DateTimeOffset.UtcNow;
+        }
+        public IdentityManagerResult SetLockedOut(TUser user, bool locked)
+        {
+            if (locked)
+            {
+                var result = userManager.SetLockoutEndDate(user.Id, DateTimeOffset.MaxValue);
+                if (!result.Succeeded)
+                {
+                    return new IdentityManagerResult(result.Errors.First());
+                }
+            }
+            else
+            {
+                var result = userManager.SetLockoutEndDate(user.Id, DateTimeOffset.MinValue);
+                if (!result.Succeeded)
+                {
+                    return new IdentityManagerResult(result.Errors.First());
+                }
+            }
+
             return IdentityManagerResult.Success;
         }
 
