@@ -167,6 +167,10 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             {
                 update.Add(PropertyMetadata.FromFunctions<TUser, string>(Constants.ClaimTypes.Phone, GetPhone, SetPhone, name: "Phone", dataType: PropertyDataType.String));
             }
+            if (this.userManager.SupportsUserTwoFactor)
+            {
+                update.Add(PropertyMetadata.FromFunctions<TUser, bool>("two_factor", GetTwoFactorEnabled, SetTwoFactorEnabled, name: "Two Factor Enabled", dataType: PropertyDataType.Boolean));
+            }
             if (this.userManager.SupportsUserLockout)
             {
                 update.Add(PropertyMetadata.FromFunctions<TUser, bool>("locked_enabled", GetLockoutEnabled, SetLockoutEnabled, name: "Lockout Enabled", dataType: PropertyDataType.Boolean));
@@ -300,6 +304,21 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
                 }
             }
             
+            return IdentityManagerResult.Success;
+        }
+
+        public bool GetTwoFactorEnabled(TUser user)
+        {
+            return userManager.GetTwoFactorEnabled(user.Id);
+        }
+        public IdentityManagerResult SetTwoFactorEnabled(TUser user, bool enabled)
+        {
+            var result = userManager.SetTwoFactorEnabled(user.Id, enabled);
+            if (!result.Succeeded)
+            {
+                return new IdentityManagerResult(result.Errors.First());
+            }
+
             return IdentityManagerResult.Success;
         }
 
