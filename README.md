@@ -1,4 +1,4 @@
-Thinktecture IdentityManager AspNetIdentity
+IdentityManager AspNetIdentity
 ===========================================
 [![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/thinktecture/Thinktecture.IdentityManager?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
