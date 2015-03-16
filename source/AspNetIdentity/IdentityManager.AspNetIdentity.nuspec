@@ -13,5 +13,9 @@
     <releaseNotes>First beta version</releaseNotes>
     <copyright>Copyright 2014</copyright>
     <tags>IdentityManager AspNetIdentity Identity Management</tags>
+
+    <dependencies>
+      <dependency id="IdentityManager" version="1.0.0-beta4" />
+    </dependencies>
   </metadata>
 </package>
