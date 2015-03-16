@@ -21,9 +21,9 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using Thinktecture.IdentityManager;
+using IdentityManager;
 
-namespace Thinktecture.IdentityManager.AspNetIdentity
+namespace IdentityManager.AspNetIdentity
 {
     public class AspNetIdentityManagerService<TUser, TUserKey, TRole, TRoleKey> : IIdentityManagerService
         where TUser : class, IUser<TUserKey>, new()
@@ -39,7 +39,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
 
         Func<Task<IdentityManagerMetadata>> metadataFunc;
 
-        AspNetIdentityManagerService(UserManager<TUser, TUserKey> userManager, RoleManager<TRole, TRoleKey> roleManager)
+        AspNetIdentityManagerService(UserManager<TUser, TUserKey> userManager, RoleManager<TRole, TRoleKey> roleManager, Func<string, TUserKey> parseUserSubject = null, Func<string, TRoleKey> parseRoleSubject = null)
         {
             if (userManager == null) throw new ArgumentNullException("userManager");
             if (roleManager == null) throw new ArgumentNullException("roleManager");
@@ -57,51 +57,68 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
                 userManager.UserTokenProvider = new TokenProvider<TUser, TUserKey>();
             }
 
-            var keyType = typeof(TUserKey);
-            if (keyType == typeof(string)) ConvertUserSubjectToKey = subject => (TUserKey)ParseString(subject);
-            else if (keyType == typeof(int)) ConvertUserSubjectToKey = subject => (TUserKey)ParseInt(subject);
-            else if (keyType == typeof(uint)) ConvertRoleSubjectToKey = subject => (TRoleKey)ParseUInt32(subject);
-            else if (keyType == typeof(long)) ConvertUserSubjectToKey = subject => (TUserKey)ParseLong(subject);
-            else if (keyType == typeof(Guid)) ConvertUserSubjectToKey = subject => (TUserKey)ParseGuid(subject);
+            if (parseUserSubject != null)
+            {
+                ConvertUserSubjectToKey = parseUserSubject;
+            }
             else
             {
-                throw new InvalidOperationException("User Key type not supported");
+                var keyType = typeof (TUserKey);
+                if (keyType == typeof (string)) ConvertUserSubjectToKey = subject => (TUserKey) ParseString(subject);
+                else if (keyType == typeof (int)) ConvertUserSubjectToKey = subject => (TUserKey) ParseInt(subject);
+                else if (keyType == typeof (uint)) ConvertUserSubjectToKey = subject => (TUserKey) ParseUInt32(subject);
+                else if (keyType == typeof (long)) ConvertUserSubjectToKey = subject => (TUserKey) ParseLong(subject);
+                else if (keyType == typeof (Guid)) ConvertUserSubjectToKey = subject => (TUserKey) ParseGuid(subject);
+                else
+                {
+                    throw new InvalidOperationException("User Key type not supported");
+                }
             }
 
-            keyType = typeof(TRoleKey);
-            if (keyType == typeof(string)) ConvertRoleSubjectToKey = subject => (TRoleKey)ParseString(subject);
-            else if (keyType == typeof(int)) ConvertRoleSubjectToKey = subject => (TRoleKey)ParseInt(subject);
-            else if (keyType == typeof(uint)) ConvertRoleSubjectToKey = subject => (TRoleKey)ParseUInt32(subject);
-            else if (keyType == typeof(long)) ConvertRoleSubjectToKey = subject => (TRoleKey)ParseLong(subject);
-            else if (keyType == typeof(Guid)) ConvertRoleSubjectToKey = subject => (TRoleKey)ParseGuid(subject);
+            if (parseRoleSubject != null)
+            {
+                ConvertRoleSubjectToKey = parseRoleSubject;
+            }
             else
             {
-                throw new InvalidOperationException("Role Key type not supported");
+                var keyType = typeof (TRoleKey);
+                if (keyType == typeof (string)) ConvertRoleSubjectToKey = subject => (TRoleKey) ParseString(subject);
+                else if (keyType == typeof (int)) ConvertRoleSubjectToKey = subject => (TRoleKey) ParseInt(subject);
+                else if (keyType == typeof (uint)) ConvertRoleSubjectToKey = subject => (TRoleKey) ParseUInt32(subject);
+                else if (keyType == typeof (long)) ConvertRoleSubjectToKey = subject => (TRoleKey) ParseLong(subject);
+                else if (keyType == typeof (Guid)) ConvertRoleSubjectToKey = subject => (TRoleKey) ParseGuid(subject);
+                else
+                {
+                    throw new InvalidOperationException("Role Key type not supported");
+                }
             }
         }
 
         public AspNetIdentityManagerService(
             UserManager<TUser, TUserKey> userManager,
             RoleManager<TRole, TRoleKey> roleManager,
-            bool includeAccountProperties = true)
-            : this(userManager, roleManager)
+            bool includeAccountProperties = true,
+            Func<string, TUserKey> parseUserSubject = null, Func<string, TRoleKey> parseRoleSubject = null)
+            : this(userManager, roleManager, parseUserSubject, parseRoleSubject)
         {
             this.metadataFunc = () => Task.FromResult(GetStandardMetadata(includeAccountProperties));
         }
 
         public AspNetIdentityManagerService(
            UserManager<TUser, TUserKey> userManager,
-            RoleManager<TRole, TRoleKey> roleManager,
-           IdentityManagerMetadata metadata)
-            : this(userManager, roleManager, () => Task.FromResult(metadata))
+           RoleManager<TRole, TRoleKey> roleManager,
+           IdentityManagerMetadata metadata,
+           Func<string, TUserKey> parseUserSubject = null, Func<string, TRoleKey> parseRoleSubject = null)
+            : this(userManager, roleManager, () => Task.FromResult(metadata), parseUserSubject, parseRoleSubject)
         {
         }
 
         public AspNetIdentityManagerService(
            UserManager<TUser, TUserKey> userManager,
-            RoleManager<TRole, TRoleKey> roleManager,
-           Func<Task<IdentityManagerMetadata>> metadataFunc)
-            : this(userManager, roleManager)
+           RoleManager<TRole, TRoleKey> roleManager,
+           Func<Task<IdentityManagerMetadata>> metadataFunc,
+           Func<string, TUserKey> parseUserSubject = null, Func<string, TRoleKey> parseRoleSubject = null)
+            : this(userManager, roleManager, parseUserSubject, parseRoleSubject)
         {
             this.metadataFunc = metadataFunc;
         }
@@ -135,7 +152,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return key;
         }
 
-        public IdentityManagerMetadata GetStandardMetadata(bool includeAccountProperties = true)
+        public virtual IdentityManagerMetadata GetStandardMetadata(bool includeAccountProperties = true)
         {
             var update = new List<PropertyMetadata>();
             if (this.userManager.SupportsUserPassword)
@@ -149,6 +166,15 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             if (this.userManager.SupportsUserPhoneNumber)
             {
                 update.Add(PropertyMetadata.FromFunctions<TUser, string>(Constants.ClaimTypes.Phone, GetPhone, SetPhone, name: "Phone", dataType: PropertyDataType.String));
+            }
+            if (this.userManager.SupportsUserTwoFactor)
+            {
+                update.Add(PropertyMetadata.FromFunctions<TUser, bool>("two_factor", GetTwoFactorEnabled, SetTwoFactorEnabled, name: "Two Factor Enabled", dataType: PropertyDataType.Boolean));
+            }
+            if (this.userManager.SupportsUserLockout)
+            {
+                update.Add(PropertyMetadata.FromFunctions<TUser, bool>("locked_enabled", GetLockoutEnabled, SetLockoutEnabled, name: "Lockout Enabled", dataType: PropertyDataType.Boolean));
+                update.Add(PropertyMetadata.FromFunctions<TUser, bool>("locked", GetLockedOut, SetLockedOut, name: "Locked Out", dataType: PropertyDataType.Boolean));
             }
 
             if (includeAccountProperties)
@@ -187,15 +213,15 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return meta;
         }
 
-        public PropertyMetadata GetMetadataForClaim(string type, string name = null, PropertyDataType dataType = PropertyDataType.String, bool required = false)
+        public virtual PropertyMetadata GetMetadataForClaim(string type, string name = null, PropertyDataType dataType = PropertyDataType.String, bool required = false)
         {
             return PropertyMetadata.FromFunctions<TUser, string>(type, GetForClaim(type), SetForClaim(type), name, dataType, required);
         }
-        public Func<TUser, string> GetForClaim(string type)
+        public virtual Func<TUser, string> GetForClaim(string type)
         {
             return user => userManager.GetClaims(user.Id).Where(x => x.Type == type).Select(x => x.Value).FirstOrDefault();
         }
-        public Func<TUser, string, IdentityManagerResult> SetForClaim(string type)
+        public virtual Func<TUser, string, IdentityManagerResult> SetForClaim(string type)
         {
             return (user, value) =>
             {
@@ -220,7 +246,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             };
         }
 
-        public IdentityManagerResult SetPassword(TUser user, string password)
+        public virtual IdentityManagerResult SetPassword(TUser user, string password)
         {
             var token = this.userManager.GeneratePasswordResetToken(user.Id);
             var result = this.userManager.ResetPassword(user.Id, token, password);
@@ -231,11 +257,11 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return IdentityManagerResult.Success;
         }
 
-        public string GetEmail(TUser user)
+        public virtual string GetEmail(TUser user)
         {
             return userManager.GetEmail(user.Id);
         }
-        public IdentityManagerResult SetEmail(TUser user, string email)
+        public virtual IdentityManagerResult SetEmail(TUser user, string email)
         {
             var result = this.userManager.SetEmail(user.Id, email);
             if (!result.Succeeded)
@@ -256,11 +282,11 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return IdentityManagerResult.Success;
         }
 
-        public string GetPhone(TUser user)
+        public virtual string GetPhone(TUser user)
         {
             return userManager.GetPhoneNumber(user.Id);
         }
-        public IdentityManagerResult SetPhone(TUser user, string phone)
+        public virtual IdentityManagerResult SetPhone(TUser user, string phone)
         {
             var result = this.userManager.SetPhoneNumber(user.Id, phone);
             if (!result.Succeeded)
@@ -281,12 +307,68 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return IdentityManagerResult.Success;
         }
 
-        public Task<IdentityManagerMetadata> GetMetadataAsync()
+        public virtual bool GetTwoFactorEnabled(TUser user)
+        {
+            return userManager.GetTwoFactorEnabled(user.Id);
+        }
+        public virtual IdentityManagerResult SetTwoFactorEnabled(TUser user, bool enabled)
+        {
+            var result = userManager.SetTwoFactorEnabled(user.Id, enabled);
+            if (!result.Succeeded)
+            {
+                return new IdentityManagerResult(result.Errors.First());
+            }
+
+            return IdentityManagerResult.Success;
+        }
+
+        public virtual bool GetLockoutEnabled(TUser user)
+        {
+            return userManager.GetLockoutEnabled(user.Id);
+        }
+        public virtual IdentityManagerResult SetLockoutEnabled(TUser user, bool enabled)
+        {
+            var result = userManager.SetLockoutEnabled(user.Id, enabled);
+            if (!result.Succeeded)
+            {
+                return new IdentityManagerResult(result.Errors.First());
+            }
+
+            return IdentityManagerResult.Success;
+        }
+
+        public virtual bool GetLockedOut(TUser user)
+        {
+            return userManager.GetLockoutEndDate(user.Id) > DateTimeOffset.UtcNow;
+        }
+        public virtual IdentityManagerResult SetLockedOut(TUser user, bool locked)
+        {
+            if (locked)
+            {
+                var result = userManager.SetLockoutEndDate(user.Id, DateTimeOffset.MaxValue);
+                if (!result.Succeeded)
+                {
+                    return new IdentityManagerResult(result.Errors.First());
+                }
+            }
+            else
+            {
+                var result = userManager.SetLockoutEndDate(user.Id, DateTimeOffset.MinValue);
+                if (!result.Succeeded)
+                {
+                    return new IdentityManagerResult(result.Errors.First());
+                }
+            }
+
+            return IdentityManagerResult.Success;
+        }
+
+        public virtual Task<IdentityManagerMetadata> GetMetadataAsync()
         {
             return this.metadataFunc();
         }
 
-        public Task<IdentityManagerResult<QueryResult<UserSummary>>> QueryUsersAsync(string filter, int start, int count)
+        public virtual Task<IdentityManagerResult<QueryResult<UserSummary>>> QueryUsersAsync(string filter, int start, int count)
         {
             var query =
                 from user in userManager.Users
@@ -330,7 +412,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             if (userManager.SupportsUserClaim)
             {
                 var claims = userManager.GetClaims(user.Id);
-                var name = claims.Where(x => x.Type == Thinktecture.IdentityManager.Constants.ClaimTypes.Name).Select(x => x.Value).FirstOrDefault();
+                var name = claims.Where(x => x.Type == IdentityManager.Constants.ClaimTypes.Name).Select(x => x.Value).FirstOrDefault();
                 if (!String.IsNullOrWhiteSpace(name))
                 {
                     return name;
@@ -339,7 +421,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return null;
         }
 
-        public async Task<IdentityManagerResult<CreateResult>> CreateUserAsync(IEnumerable<Thinktecture.IdentityManager.PropertyValue> properties)
+        public virtual async Task<IdentityManagerResult<CreateResult>> CreateUserAsync(IEnumerable<IdentityManager.PropertyValue> properties)
         {
             var usernameClaim = properties.Single(x => x.Type == Constants.ClaimTypes.Username);
             var passwordClaim = properties.Single(x => x.Type == Constants.ClaimTypes.Password);
@@ -372,7 +454,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return new IdentityManagerResult<CreateResult>(new CreateResult { Subject = user.Id.ToString() });
         }
 
-        public async Task<IdentityManagerResult> DeleteUserAsync(string subject)
+        public virtual async Task<IdentityManagerResult> DeleteUserAsync(string subject)
         {
             TUserKey key = ConvertUserSubjectToKey(subject);
             var user = await this.userManager.FindByIdAsync(key);
@@ -390,7 +472,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return IdentityManagerResult.Success;
         }
 
-        public async Task<IdentityManagerResult<UserDetail>> GetUserAsync(string subject)
+        public virtual async Task<IdentityManagerResult<UserDetail>> GetUserAsync(string subject)
         {
             TUserKey key = ConvertUserSubjectToKey(subject);
             var user = await this.userManager.FindByIdAsync(key);
@@ -420,10 +502,10 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             if (userManager.SupportsUserClaim)
             {
                 var userClaims = await userManager.GetClaimsAsync(key);
-                var claims = new List<Thinktecture.IdentityManager.ClaimValue>();
+                var claims = new List<IdentityManager.ClaimValue>();
                 if (userClaims != null)
                 {
-                    claims.AddRange(userClaims.Select(x => new Thinktecture.IdentityManager.ClaimValue { Type = x.Type, Value = x.Value }));
+                    claims.AddRange(userClaims.Select(x => new IdentityManager.ClaimValue { Type = x.Type, Value = x.Value }));
                 }
                 result.Claims = claims.ToArray();
             }
@@ -431,7 +513,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return new IdentityManagerResult<UserDetail>(result);
         }
 
-        public async Task<IdentityManagerResult> SetUserPropertyAsync(string subject, string type, string value)
+        public virtual async Task<IdentityManagerResult> SetUserPropertyAsync(string subject, string type, string value)
         {
             TUserKey key = ConvertUserSubjectToKey(subject);
             var user = await this.userManager.FindByIdAsync(key);
@@ -462,7 +544,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return IdentityManagerResult.Success;
         }
 
-        public async Task<IdentityManagerResult> AddUserClaimAsync(string subject, string type, string value)
+        public virtual async Task<IdentityManagerResult> AddUserClaimAsync(string subject, string type, string value)
         {
             TUserKey key = ConvertUserSubjectToKey(subject);
             var user = await this.userManager.FindByIdAsync(key);
@@ -484,7 +566,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return IdentityManagerResult.Success;
         }
 
-        public async Task<IdentityManagerResult> RemoveUserClaimAsync(string subject, string type, string value)
+        public virtual async Task<IdentityManagerResult> RemoveUserClaimAsync(string subject, string type, string value)
         {
             TUserKey key = ConvertUserSubjectToKey(subject);
             var user = await this.userManager.FindByIdAsync(key);
@@ -502,12 +584,12 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return IdentityManagerResult.Success;
         }
 
-        private IEnumerable<string> ValidateUserProperty(string type, string value)
+        protected virtual IEnumerable<string> ValidateUserProperty(string type, string value)
         {
             return Enumerable.Empty<string>();
         }
 
-        private string GetUserProperty(PropertyMetadata propMetadata, TUser user)
+        protected virtual string GetUserProperty(PropertyMetadata propMetadata, TUser user)
         {
             string val;
             if (propMetadata.TryGet(user, out val))
@@ -518,7 +600,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             throw new Exception("Invalid property type " + propMetadata.Type);
         }
 
-        private IdentityManagerResult SetUserProperty(IEnumerable<PropertyMetadata> propsMeta, TUser user, string type, string value)
+        protected virtual IdentityManagerResult SetUserProperty(IEnumerable<PropertyMetadata> propsMeta, TUser user, string type, string value)
         {
             IdentityManagerResult result;
             if (propsMeta.TrySet(user, type, value, out result))
@@ -530,7 +612,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
         }
 
 
-        void ValidateSupportsRoles()
+        protected virtual void ValidateSupportsRoles()
         {
             if (roleManager == null)
             {
@@ -538,7 +620,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             }
         }
 
-        public async Task<IdentityManagerResult<CreateResult>> CreateRoleAsync(IEnumerable<PropertyValue> properties)
+        public virtual async Task<IdentityManagerResult<CreateResult>> CreateRoleAsync(IEnumerable<PropertyValue> properties)
         {
             ValidateSupportsRoles();
 
@@ -571,7 +653,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return new IdentityManagerResult<CreateResult>(new CreateResult { Subject = role.Id.ToString() });
         }
 
-        public async Task<IdentityManagerResult> DeleteRoleAsync(string subject)
+        public virtual async Task<IdentityManagerResult> DeleteRoleAsync(string subject)
         {
             ValidateSupportsRoles();
 
@@ -591,7 +673,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return IdentityManagerResult.Success;
         }
 
-        public async Task<IdentityManagerResult<RoleDetail>> GetRoleAsync(string subject)
+        public virtual async Task<IdentityManagerResult<RoleDetail>> GetRoleAsync(string subject)
         {
             ValidateSupportsRoles();
 
@@ -623,7 +705,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return new IdentityManagerResult<RoleDetail>(result);
         }
 
-        public Task<IdentityManagerResult<QueryResult<RoleSummary>>> QueryRolesAsync(string filter, int start, int count)
+        public virtual Task<IdentityManagerResult<QueryResult<RoleSummary>>> QueryRolesAsync(string filter, int start, int count)
         {
             ValidateSupportsRoles();
 
@@ -667,7 +749,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return Task.FromResult(new IdentityManagerResult<QueryResult<RoleSummary>>(result));
         }
 
-        public async Task<IdentityManagerResult> SetRolePropertyAsync(string subject, string type, string value)
+        public virtual async Task<IdentityManagerResult> SetRolePropertyAsync(string subject, string type, string value)
         {
             ValidateSupportsRoles();
 
@@ -700,17 +782,17 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return IdentityManagerResult.Success;
         }
 
-        IEnumerable<string> ValidateRoleProperties(IEnumerable<PropertyValue> properties)
+        protected virtual IEnumerable<string> ValidateRoleProperties(IEnumerable<PropertyValue> properties)
         {
             return properties.Select(x => ValidateRoleProperty(x.Type, x.Value)).Aggregate((x, y) => x.Concat(y));
         }
 
-        private IEnumerable<string> ValidateRoleProperty(string type, string value)
+        protected virtual IEnumerable<string> ValidateRoleProperty(string type, string value)
         {
             return Enumerable.Empty<string>();
         }
 
-        private string GetRoleProperty(PropertyMetadata propMetadata, TRole role)
+        protected virtual string GetRoleProperty(PropertyMetadata propMetadata, TRole role)
         {
             string val;
             if (propMetadata.TryGet(role, out val))
@@ -721,7 +803,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             throw new Exception("Invalid property type " + propMetadata.Type);
         }
 
-        private IdentityManagerResult SetRoleProperty(IEnumerable<PropertyMetadata> propsMeta, TRole role, string type, string value)
+        protected virtual IdentityManagerResult SetRoleProperty(IEnumerable<PropertyMetadata> propsMeta, TRole role, string type, string value)
         {
             IdentityManagerResult result;
             if (propsMeta.TrySet(role, type, value, out result))

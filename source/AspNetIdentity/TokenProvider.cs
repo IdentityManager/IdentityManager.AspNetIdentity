@@ -20,7 +20,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Thinktecture.IdentityManager.AspNetIdentity
+namespace IdentityManager.AspNetIdentity
 {
     class TokenProvider<TUser, TKey> : IUserTokenProvider<TUser, TKey>
         where TUser : class, IUser<TKey>

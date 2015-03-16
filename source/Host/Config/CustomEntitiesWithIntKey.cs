@@ -21,7 +21,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 
-namespace Thinktecture.IdentityManager.Host
+namespace IdentityManager.Host
 {
     public class CustomUser : IdentityUser<int, CustomUserLogin, CustomUserRole, CustomUserClaim> { }
     public class CustomUserLogin : IdentityUserLogin<int> { }
