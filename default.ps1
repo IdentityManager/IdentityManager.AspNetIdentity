@@ -59,7 +59,7 @@ task CreateNuGetPackage -depends Compile {
 	}
 
 	if ($buildNumber -ne 0){
-		$packageVersion = $packageVersion + "-build" + $buildNumber.ToString().PadLeft(5,'0')
+		$packageVersion = $packageVersion + "-build-" + $buildNumber.ToString().PadLeft(5,'0')
 	}
 
 	md $dist_directory
