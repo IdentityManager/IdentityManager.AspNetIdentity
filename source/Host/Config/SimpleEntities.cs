@@ -21,7 +21,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Web;
 
-namespace Thinktecture.IdentityManager.Host
+namespace IdentityManager.Host
 {
     public class User : IdentityUser
     {

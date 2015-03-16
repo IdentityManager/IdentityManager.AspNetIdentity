@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>IdentityManager.AspNetIdentity</id>
+    <version>0.0.0</version>
+    <title>IdentityManager - AspNetIdentity</title>
+    <authors>Brock Allen, Dominick Baier</authors>
+    <owners>Brock Allen, Dominick Baier</owners>
+    <projectUrl>https://github.com/IdentityManager/IdentityManager.AspNetIdentity</projectUrl>
+    <iconUrl>http://www.thinktecture.com/images/favicon.ico</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>"IdentityManager - AspNetIdentity" is a AspNetIdentity-based identity manager provider for IdentityManager.</description>
+    <releaseNotes>First beta version</releaseNotes>
+    <copyright>Copyright 2014</copyright>
+    <tags>IdentityManager AspNetIdentity Identity Management</tags>
+  </metadata>
+</package>

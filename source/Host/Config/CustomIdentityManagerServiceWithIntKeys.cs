@@ -19,10 +19,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
-using Thinktecture.IdentityManager.AspNetIdentity;
-using Thinktecture.IdentityManager.Configuration;
+using IdentityManager.AspNetIdentity;
+using IdentityManager.Configuration;
 
-namespace Thinktecture.IdentityManager.Host.Config
+namespace IdentityManager.Host.Config
 {
     public static class CustomIdentityManagerServiceWithIntKeysExtensions
     {

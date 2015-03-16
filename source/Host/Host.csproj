@@ -11,8 +11,8 @@
     <ProjectTypeGuids>{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Thinktecture.IdentityManager.Host</RootNamespace>
-    <AssemblyName>Thinktecture.IdentityManager.Host</AssemblyName>
+    <RootNamespace>IdentityManager.Host</RootNamespace>
+    <AssemblyName>IdentityManager.Host</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <UseIISExpress>true</UseIISExpress>
     <IISExpressSSLPort />
@@ -48,6 +48,9 @@
     <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\EntityFramework.6.1.2\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
+    <Reference Include="IdentityManager">
+      <HintPath>..\packages\IdentityManager.1.0.0-pre-10032\lib\net45\IdentityManager.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.AspNet.Identity.Core, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -86,10 +89,6 @@
     <Reference Include="System.Web.Services" />
     <Reference Include="System.EnterpriseServices" />
     <Reference Include="System.Xml.Linq" />
-    <Reference Include="Thinktecture.IdentityManager, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Thinktecture.IdentityManager.1.0.0-pre-10013\lib\net45\Thinktecture.IdentityManager.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config" />
@@ -115,9 +114,9 @@
     <Compile Include="Startup.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\AspNetIdentity\Thinktecture.IdentityManager.AspNetIdentity.csproj">
+    <ProjectReference Include="..\AspNetIdentity\IdentityManager.AspNetIdentity.csproj">
       <Project>{35fb37da-28d5-4158-86a2-74d6275b842f}</Project>
-      <Name>Thinktecture.IdentityManager.AspNetIdentity</Name>
+      <Name>IdentityManager.AspNetIdentity</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup />

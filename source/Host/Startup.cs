@@ -15,10 +15,10 @@
  */
 
 using Owin;
-using Thinktecture.IdentityManager.Configuration;
-using Thinktecture.IdentityManager.Host.Config;
+using IdentityManager.Configuration;
+using IdentityManager.Host.Config;
 
-namespace Thinktecture.IdentityManager.Host
+namespace IdentityManager.Host
 {
     public class Startup
     {

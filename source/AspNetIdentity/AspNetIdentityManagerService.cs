@@ -21,9 +21,9 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using Thinktecture.IdentityManager;
+using IdentityManager;
 
-namespace Thinktecture.IdentityManager.AspNetIdentity
+namespace IdentityManager.AspNetIdentity
 {
     public class AspNetIdentityManagerService<TUser, TUserKey, TRole, TRoleKey> : IIdentityManagerService
         where TUser : class, IUser<TUserKey>, new()
@@ -412,7 +412,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             if (userManager.SupportsUserClaim)
             {
                 var claims = userManager.GetClaims(user.Id);
-                var name = claims.Where(x => x.Type == Thinktecture.IdentityManager.Constants.ClaimTypes.Name).Select(x => x.Value).FirstOrDefault();
+                var name = claims.Where(x => x.Type == IdentityManager.Constants.ClaimTypes.Name).Select(x => x.Value).FirstOrDefault();
                 if (!String.IsNullOrWhiteSpace(name))
                 {
                     return name;
@@ -421,7 +421,7 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             return null;
         }
 
-        public virtual async Task<IdentityManagerResult<CreateResult>> CreateUserAsync(IEnumerable<Thinktecture.IdentityManager.PropertyValue> properties)
+        public virtual async Task<IdentityManagerResult<CreateResult>> CreateUserAsync(IEnumerable<IdentityManager.PropertyValue> properties)
         {
             var usernameClaim = properties.Single(x => x.Type == Constants.ClaimTypes.Username);
             var passwordClaim = properties.Single(x => x.Type == Constants.ClaimTypes.Password);
@@ -502,10 +502,10 @@ namespace Thinktecture.IdentityManager.AspNetIdentity
             if (userManager.SupportsUserClaim)
             {
                 var userClaims = await userManager.GetClaimsAsync(key);
-                var claims = new List<Thinktecture.IdentityManager.ClaimValue>();
+                var claims = new List<IdentityManager.ClaimValue>();
                 if (userClaims != null)
                 {
-                    claims.AddRange(userClaims.Select(x => new Thinktecture.IdentityManager.ClaimValue { Type = x.Type, Value = x.Value }));
+                    claims.AddRange(userClaims.Select(x => new IdentityManager.ClaimValue { Type = x.Type, Value = x.Value }));
                 }
                 result.Claims = claims.ToArray();
             }
