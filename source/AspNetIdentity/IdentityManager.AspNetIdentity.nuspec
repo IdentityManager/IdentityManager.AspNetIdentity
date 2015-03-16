@@ -11,11 +11,12 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>"IdentityManager - AspNetIdentity" is a AspNetIdentity-based identity manager provider for IdentityManager.</description>
     <releaseNotes>First beta version</releaseNotes>
-    <copyright>Copyright 2014</copyright>
+    <copyright>Copyright 2015</copyright>
     <tags>IdentityManager AspNetIdentity Identity Management</tags>
 
-    <dependencies>
+    <!--<dependencies>
       <dependency id="IdentityManager" version="1.0.0-beta4" />
-    </dependencies>
+      <dependency id="Microsoft.AspNet.Identity.Core" version="2.1.0" />
+    </dependencies>-->
   </metadata>
 </package>
