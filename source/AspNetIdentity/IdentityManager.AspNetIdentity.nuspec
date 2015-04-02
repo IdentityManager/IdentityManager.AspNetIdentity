@@ -19,4 +19,7 @@
       <dependency id="Microsoft.AspNet.Identity.Core" version="2.1.0" />
     </dependencies>-->
   </metadata>
+  <files>
+    <file src="..\..\build\$id$.pdb" target="lib\net45" />
+  </files>
 </package>
