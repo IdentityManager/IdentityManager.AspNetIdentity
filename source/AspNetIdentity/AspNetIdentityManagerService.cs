@@ -31,6 +31,8 @@ namespace IdentityManager.AspNetIdentity
         where TRole : class, IRole<TRoleKey>, new()
         where TRoleKey : IEquatable<TRoleKey>
     {
+        public string RoleClaimType { get; set; }
+
         protected Microsoft.AspNet.Identity.UserManager<TUser, TUserKey> userManager;
         protected Func<string, TUserKey> ConvertUserSubjectToKey;
 
@@ -92,6 +94,8 @@ namespace IdentityManager.AspNetIdentity
                     throw new InvalidOperationException("Role Key type not supported");
                 }
             }
+
+            this.RoleClaimType = Constants.ClaimTypes.Role;
         }
 
         public AspNetIdentityManagerService(
@@ -197,7 +201,7 @@ namespace IdentityManager.AspNetIdentity
 
             var role = new RoleMetadata
             {
-                RoleClaimType = Constants.ClaimTypes.Role,
+                RoleClaimType = this.RoleClaimType,
                 SupportsCreate = true,
                 SupportsDelete = true,
                 CreateProperties = new PropertyMetadata[] {

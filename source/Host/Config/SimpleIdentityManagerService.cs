@@ -42,6 +42,7 @@ namespace IdentityManager.Host.Config
         public SimpleIdentityManagerService(UserManager userMgr, RoleManager roleMgr)
             : base(userMgr, roleMgr)
         {
+            // this.RoleClaimType = System.Security.Claims.ClaimTypes.Role;
         }
     }
 }
