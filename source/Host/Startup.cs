@@ -17,6 +17,8 @@
 using Owin;
 using IdentityManager.Configuration;
 using IdentityManager.Host.Config;
+using IdentityManager.Core.Logging;
+using IdentityManager.Logging;
 
 namespace IdentityManager.Host
 {
@@ -24,6 +26,8 @@ namespace IdentityManager.Host
     {
         public void Configuration(IAppBuilder app)
         {
+            LogProvider.SetCurrentLogProvider(new TraceSourceLogProvider());
+
             var factory = new IdentityManagerServiceFactory();
             
             factory.ConfigureSimpleIdentityManagerService("AspId");
