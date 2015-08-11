@@ -15,7 +15,7 @@
     <tags>IdentityManager AspNetIdentity Identity Management</tags>
 
     <!--<dependencies>
-      <dependency id="IdentityManager" version="1.0.0-beta5" />
+      <dependency id="IdentityManager" version="1.0.0-beta5-5" />
       <dependency id="Microsoft.AspNet.Identity.Core" version="2.2.1" />
     </dependencies>-->
   </metadata>
